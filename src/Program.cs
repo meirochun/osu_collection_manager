@@ -20,12 +20,23 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 // The app is for one person on one PC: the first Url is the address of "the app", used below to open the browser.
 string appUrl = (builder.Configuration["Urls"] ?? "http://localhost:5000").Split(';')[0].Replace("*", "localhost").Replace("+", "localhost");
 
-// Only one copy per port. A second launch just opens the browser tab of the copy that is already running.
+// Only one copy per port. A second launch just opens the browser tab of the copy that is already running,
+// unless that copy is not answering properly (e.g. an old version left running): then say so instead of failing silently.
 using var singleInstance = new Mutex(true, $"Local\\OsuCollectionManager-{new Uri(appUrl).Port}", out bool isFirstInstance);
 if (!isFirstInstance)
 {
-    Console.WriteLine($"osu! Collection Manager is already running, opening {appUrl}");
-    OpenBrowser(appUrl);
+    if (await IsAppResponding(appUrl))
+    {
+        Console.WriteLine($"osu! Collection Manager is already running, opening {appUrl}");
+        OpenBrowser(appUrl);
+    }
+    else
+    {
+        Console.WriteLine($"Another copy of osu! Collection Manager is already using {appUrl}, but it is not responding correctly");
+        Console.WriteLine("(probably an older version that was left running). Close it - in Task Manager, end \"osu_collection_manager\" -");
+        Console.WriteLine("and start this program again.");
+        PauseIfInteractive();
+    }
     return;
 }
 
@@ -354,11 +365,30 @@ try
 catch (IOException e) when (e.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase))
 {
     Console.WriteLine($"Could not start: another program is already using {appUrl}. Close it, or start this app with --urls=http://localhost:<other port>.");
-    if (Environment.UserInteractive && !Console.IsInputRedirected)
+    PauseIfInteractive();
+}
+
+/// <summary>True if something answers the app's home page at <paramref name="url"/>.</summary>
+static async Task<bool> IsAppResponding(string url)
+{
+    try
     {
-        Console.WriteLine("Press any key to close.");
-        Console.ReadKey(true);
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+        using var response = await http.GetAsync(url);
+        return response.IsSuccessStatusCode;
     }
+    catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+    {
+        return false;
+    }
+}
+
+/// <summary>Keeps the console window open so a double-clicked exe doesn't vanish before the message can be read.</summary>
+static void PauseIfInteractive()
+{
+    if (!Environment.UserInteractive || Console.IsInputRedirected) return;
+    Console.WriteLine("Press any key to close.");
+    Console.ReadKey(true);
 }
 
 static string? FindWebRoot(string startFolder)
