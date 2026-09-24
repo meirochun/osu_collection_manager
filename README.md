@@ -18,6 +18,12 @@ anywhere and you don't need an osu! API key.
 
 On the first start the app looks for your osu! folder by itself, or asks you for it (see [First run](#first-run)).
 
+## Screenshots
+
+![Collections Page](resources/collections_page.png)
+
+![Training Planner Page](training_planner_page.png)
+
 ## What you need
 
 **To run a release build (the zip with the `.exe`):**
