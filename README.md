@@ -22,7 +22,7 @@ On the first start the app looks for your osu! folder by itself, or asks you for
 
 ![Collections Page](resources/collections_page.png)
 
-![Training Planner Page](training_planner_page.png)
+![Training Planner Page](resources/training_planner_page.png)
 
 ## What you need
 
