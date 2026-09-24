@@ -1,0 +1,42 @@
+/* Training Planner tab: settings form, profile summary and the proposed collections. */
+
+.form label { display: block; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.form input, .form textarea { display: block; width: 100%; margin-top: 4px; }
+.form button { width: 100%; }
+
+/* focus picker */
+.form fieldset.focus { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 10px 4px; }
+.form fieldset.focus legend { font-size: 12px; color: var(--muted); padding: 0 6px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.form .presets button { width: auto; padding: 3px 10px; font-size: 12px; }
+.presets button.active { border-color: var(--accent); color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.form .chip { position: relative; display: inline-block; margin: 0; }
+.form .chip input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.chip span { display: inline-block; padding: 3px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-2); color: var(--text); font-size: 12px; cursor: pointer; }
+.chip:hover span { border-color: var(--muted); }
+.chip:has(input:checked) span { background: var(--accent); border-color: var(--accent); color: #1a0d14; font-weight: 600; }
+.chip:has(input:focus-visible) span { outline: 2px solid var(--accent-2); }
+
+.form input[type=range] { padding: 0; border: none; background: none; accent-color: var(--accent); }
+.range-summary { margin: -4px 0 12px; }
+.form label.check { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; }
+.form label.check input { display: inline-block; width: auto; margin: 0; }
+.advanced { margin: 4px 0 12px; }
+.advanced summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+
+/* plan review */
+.plan-coll-head { display: flex; align-items: center; gap: 8px; }
+.plan-coll.excluded { opacity: .5; }
+.coll-name { flex: 1; font-size: 15px; font-weight: 600; background: none; border-color: transparent; padding: 2px 6px; }
+.coll-name:hover, .coll-name:focus { border-color: var(--line); background: var(--panel-2); }
+
+.profile { margin-top: 14px; font-size: 13px; }
+.profile .big { font-size: 20px; font-weight: 700; }
+.profile details { margin-top: 8px; }
+.top-play { margin: 4px 0; }
+
+.plan-coll { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+.plan-coll h3 { margin: 0 0 2px; font-size: 15px; }
+.plan-desc { margin-bottom: 6px; }
+.tag.family { background: var(--accent); color: #1a0d14; font-weight: 600; }

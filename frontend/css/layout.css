@@ -1,0 +1,43 @@
+/* Page frame: centered container, header, tab switching, toolbars and the two-column layout. */
+
+/* Everything (header content, warning text, page body) shares this centered column. */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* ---- header ---- */
+.site-header {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.header-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+.brand { font-weight: 700; font-size: 16px; white-space: nowrap; }
+.logo { color: var(--accent); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav button { background: none; border: none; color: var(--muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+nav button:hover { color: var(--text); background: var(--panel-2); }
+nav button.active { color: var(--text); background: var(--panel-2); box-shadow: inset 0 -2px 0 var(--accent); }
+.status-area { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.status { color: var(--muted); font-size: 12px; }
+
+.warning { background: #4a2a12; color: var(--warn); border-bottom: 1px solid #6b3d1a; }
+.warning .container { padding-top: 8px; padding-bottom: 8px; }
+
+/* ---- tabs ---- */
+main.container { padding-top: 16px; padding-bottom: 40px; }
+.tab { display: none; }
+.tab.active { display: block; }
+
+/* ---- toolbars & pager ---- */
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.toolbar input[type=search] { flex: 1; min-width: 220px; }
+.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; }
+
+/* ---- sidebar + detail layout ---- */
+.split { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+aside { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }

@@ -1,0 +1,28 @@
+/* First-run "Where is your osu! folder?" dialog. */
+
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(8, 7, 12, .8); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.overlay-card { width: 100%; max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
+.overlay-card h2 { margin: 0 0 6px; font-size: 20px; }
+.overlay-card code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+
+.setup-candidates { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
+.setup-candidates .candidate { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 12px; }
+.setup-candidates .candidate:hover { border-color: var(--accent); }
+.setup-candidates .candidate strong { word-break: break-all; }
+
+.setup-manual { display: flex; gap: 8px; margin-top: 10px; }
+.setup-manual input { flex: 1; min-width: 0; }
+.setup-error { margin-top: 10px; padding: 8px 10px; border: 1px solid var(--bad); border-radius: 6px; color: var(--bad); }
+.setup-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* In-page folder browser (opened by "Browse…") */
+.folder-browser { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.folder-path { padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); word-break: break-all; }
+.folder-list { max-height: 260px; overflow: auto; padding: 4px; }
+.folder-row { display: flex; align-items: center; gap: 6px; }
+.folder-row .folder-open { flex: 1; text-align: left; background: none; border: none; padding: 5px 8px; border-radius: 4px; }
+.folder-row .folder-open:hover { background: var(--panel-2); }
+.folder-row .folder-use { padding: 2px 10px; font-size: 12px; }
+.folder-badge { color: var(--ok); font-size: 12px; margin-left: 6px; }
+.folder-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
+.folder-empty { padding: 10px; }

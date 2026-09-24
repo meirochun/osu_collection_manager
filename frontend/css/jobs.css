@@ -1,0 +1,8 @@
+/* Jobs tab and the progress boxes reused by the Planner. */
+
+.job { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.job-header { margin: 0; }
+.progress { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin: 6px 0; }
+.progress > div { height: 100%; background: var(--accent); transition: width .3s; }
+.log { background: #111016; border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: Consolas, monospace; font-size: 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; color: #c9c4d6; }
+.badge { background: var(--accent); color: #1a0d14; border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 700; }

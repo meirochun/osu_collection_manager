@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>osu! Collection Manager</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/beatmaps.css">
+  <link rel="stylesheet" href="css/collections.css">
+  <link rel="stylesheet" href="css/search.css">
+  <link rel="stylesheet" href="css/planner.css">
+  <link rel="stylesheet" href="css/jobs.css">
+  <link rel="stylesheet" href="css/setup.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <div class="brand"><span class="logo">●</span> osu! Collection Manager</div>
+    <nav>
+      <button data-tab="library" class="active">Library</button>
+      <button data-tab="collections">Collections</button>
+      <button data-tab="search">Search &amp; Download</button>
+      <button data-tab="planner">Training Planner</button>
+      <button data-tab="jobs">Jobs <span id="jobBadge" class="badge hidden"></span></button>
+    </nav>
+    <div class="status-area">
+      <span id="status" class="status"></span>
+      <button id="changeOsuFolder" class="link small" title="Choose a different osu! folder">Change folder</button>
+    </div>
+  </div>
+</header>
+<div id="gameWarning" class="warning hidden">
+  <div class="container">
+    osu! is running. Close it before changing collections, or it will overwrite collection.db when it exits.
+  </div>
+</div>
+
+<main class="container">
+  <!-- LIBRARY -->
+  <section id="tab-library" class="tab active">
+    <div class="toolbar">
+      <input id="libQ" type="search" placeholder="Search artist, title, mapper, difficulty, id…">
+      <label>★ <input id="libMin" type="number" step="0.1" min="0" placeholder="min"> – <input id="libMax" type="number" step="0.1" min="0" placeholder="max"></label>
+      <select id="libMode">
+        <option value="Osu">osu!</option><option value="Taiko">taiko</option>
+        <option value="Catch">catch</option><option value="Mania">mania</option><option value="">all modes</option>
+      </select>
+      <select id="libSort">
+        <option value="">Artist</option><option value="stars">Stars</option><option value="bpm">BPM</option>
+        <option value="length">Length</option><option value="played">Last played</option>
+      </select>
+      <span class="spacer"></span>
+      <select id="libTarget"></select>
+      <button id="libAdd" class="primary" disabled>Add selected</button>
+    </div>
+    <div id="libInfo" class="muted small"></div>
+    <table class="maps">
+      <thead><tr><th><input type="checkbox" id="libAll"></th><th></th><th>Beatmap</th><th>★</th><th>BPM</th><th>Length</th><th>CS/AR/OD</th><th>Status</th></tr></thead>
+      <tbody id="libRows"></tbody>
+    </table>
+    <div class="pager"><button id="libPrev">‹ Prev</button><span id="libPage"></span><button id="libNext">Next ›</button></div>
+  </section>
+
+  <!-- COLLECTIONS -->
+  <section id="tab-collections" class="tab">
+    <div class="split">
+      <aside>
+        <div class="toolbar"><input id="newColl" placeholder="New collection name"><button id="newCollBtn">Create</button></div>
+        <div class="import-row">
+          <button id="importCollBtn" title="Load a collection from an exported .json file">Import from file…</button>
+          <input id="importCollFile" type="file" accept=".json,application/json" hidden>
+        </div>
+        <ul id="collList" class="list"></ul>
+      </aside>
+      <div class="detail">
+        <div id="collHeader" class="toolbar"></div>
+        <table class="maps">
+          <thead><tr><th></th><th>Beatmap</th><th>★</th><th>BPM</th><th>Length</th><th></th></tr></thead>
+          <tbody id="collRows"></tbody>
+        </table>
+        <p id="collEmpty" class="muted">Select a collection.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEARCH -->
+  <section id="tab-search" class="tab">
+    <div class="toolbar">
+      <input id="searchQ" type="search" placeholder="Search the beatmap mirror (artist, title, mapper, tags)…">
+      <label><input id="searchRanked" type="checkbox" checked> Ranked only</label>
+      <button id="searchBtn" class="primary">Search</button>
+      <span class="spacer"></span>
+      <input id="dlColl" placeholder="Add downloads to collection (optional)" list="collNames">
+      <button id="dlBtn" class="primary" disabled>Download selected</button>
+    </div>
+    <datalist id="collNames"></datalist>
+    <div id="searchResults" class="cards"></div>
+    <div class="pager"><div id="searchSpinner" class="spinner hidden" role="status" aria-label="Loading more results"></div></div>
+  </section>
+
+  <!-- PLANNER -->
+  <section id="tab-planner" class="tab">
+    <div class="split">
+      <aside>
+        <form id="planForm" class="form">
+          <label>osu! username<input name="username" required></label>
+
+          <fieldset class="focus">
+            <legend>What do you want to train?</legend>
+            <div id="focusPresets" class="presets">
+              <button type="button" data-preset="all">Everything</button>
+              <button type="button" data-preset="aim">Aim</button>
+              <button type="button" data-preset="tech">Tech only</button>
+              <button type="button" data-preset="speed">Speed &amp; stamina</button>
+            </div>
+            <div id="focusChips" class="chips"></div>
+            <p class="muted small">Pick one or more. With nothing selected you get a bit of everything.</p>
+          </fieldset>
+
+          <label>Difficulty <span class="muted small">(easier ↔ harder)</span>
+            <input name="starOffset" type="range" min="-1" max="1.5" step="0.1" value="0">
+          </label>
+          <div id="offsetSummary" class="muted small range-summary"></div>
+
+          <label id="tiersRow" class="hidden">Split into difficulty tiers
+            <select name="tiers">
+              <option value="1">One collection</option>
+              <option value="2">2 tiers</option>
+              <option value="3">3 tiers</option>
+              <option value="4">4 tiers</option>
+            </select>
+          </label>
+
+          <label class="check"><input name="includeRevisit" type="checkbox" checked> Revisit low-accuracy plays</label>
+          <label class="check"><input name="includeFarm" type="checkbox" checked> Farm known top plays</label>
+
+          <details class="advanced">
+            <summary>Advanced settings</summary>
+            <label>Collection prefix<input name="prefix" value="Training"></label>
+            <label>Maps per collection<input name="mapsPerCollection" type="number" value="12" min="1" max="50"></label>
+            <label>Sight-reading maps<input name="sightReadingMaps" type="number" value="20" min="1" max="60"></label>
+            <label>Minimum tag votes <span class="muted small">(higher = stricter, fewer maps)</span><input name="minTagVotes" type="number" value="2" min="1" max="10" step="0.5"></label>
+            <label>Tag lookups <span id="lookupEstimate" class="muted small"></span><input name="tagLookups" type="number" value="300" min="20" max="2000"></label>
+            <label>Revisit maps under accuracy %<input name="revisitBelowAccuracy" type="number" value="97.5" step="0.5"></label>
+            <label>Extra revisit beatmap ids <span class="muted small">(comma separated)</span><input name="revisitBeatmapIds" placeholder="e.g. 2897724"></label>
+            <label>Search queries <span class="muted small">(one per line)</span><textarea name="queries" rows="6" placeholder="Automatic, based on what you chose to train"></textarea></label>
+          </details>
+
+          <button class="primary" type="submit">Generate plan</button>
+        </form>
+        <div id="profileBox"></div>
+      </aside>
+      <div class="detail">
+        <div id="planProgress"></div>
+        <div id="planOut"><p class="muted">Generate a plan to see the proposed collections. Nothing is downloaded or written until you apply it.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOBS -->
+  <section id="tab-jobs" class="tab">
+    <div id="jobList"></div>
+  </section>
+</main>
+
+<!-- FIRST-RUN SETUP: shown until the osu! folder is known (and when "Change folder" is clicked) -->
+<div id="setupOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <div class="overlay-card">
+    <h2 id="setupTitle">Where is your osu! folder?</h2>
+    <p class="muted">Choose the folder that contains <code>osu!.db</code> and your <code>Songs</code> folder. This is only remembered on this computer.</p>
+    <div id="setupCandidates" class="setup-candidates"></div>
+    <div class="setup-manual">
+      <input id="setupPath" placeholder="Paste the folder path, e.g. C:\Users\you\AppData\Local\osu!" spellcheck="false" autocomplete="off">
+      <button id="setupBrowse" type="button">Browse…</button>
+    </div>
+    <div id="setupBrowser" class="folder-browser hidden">
+      <div id="folderPath" class="folder-path"></div>
+      <div id="folderList" class="folder-list"></div>
+      <div class="folder-actions">
+        <span id="folderHint" class="muted small"></span>
+        <button id="folderSelect" type="button" class="primary">Select this folder</button>
+      </div>
+    </div>
+    <div id="setupError" class="setup-error hidden" role="alert"></div>
+    <div class="setup-actions">
+      <button id="setupCancel" type="button" class="hidden">Cancel</button>
+      <button id="setupUse" type="button" class="primary">Use this folder</button>
+    </div>
+  </div>
+</div>
+
+<audio id="player"></audio>
+<div id="toast" class="toast hidden"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
