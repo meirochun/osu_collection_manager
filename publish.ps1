@@ -2,7 +2,7 @@
 #
 #   .\publish.ps1
 #
-# Result:  dist\osu_collection_manager.exe   (+ the frontend folder and appsettings.json next to it)
+# Result:  dist\osu_collection_manager.exe   (+ the wwwroot folder and appsettings.json next to it)
 #          dist\osu_collection_manager-win-x64.zip   (the same thing, zipped)
 #
 # Self-contained means the person running it does NOT need .NET installed.
@@ -19,7 +19,7 @@ $zipPath = Join-Path $PSScriptRoot "dist\osu_collection_manager-$Runtime.zip"
 
 if (Test-Path "dist") { Remove-Item "dist" -Recurse -Force }
 
-dotnet publish backend -c Release -r $Runtime --self-contained true `
+dotnet publish src -c Release -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:DebugType=None `

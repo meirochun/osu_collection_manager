@@ -49,7 +49,7 @@ Windows SmartScreen may warn about an unsigned app the first time; choose **More
 ### From source
 
 ```
-dotnet run --project backend
+dotnet run --project src
 ```
 
 The console prints the address to open (`dotnet run` also opens the browser for you).
@@ -60,17 +60,17 @@ The console prints the address to open (`dotnet run` also opens the browser for 
 .\publish.ps1
 ```
 
-This produces a self-contained single-file executable and a zip in `dist\`. The zip contains the `.exe`, the `frontend`
+This produces a self-contained single-file executable and a zip in `dist\`. The zip contains the `.exe`, the `wwwroot`
 folder and `appsettings.json`; they must stay together.
 
 ### Options
 
-Pass these on the command line (`osu_collection_manager.exe --no-browser`, or `dotnet run --project backend -- --no-browser`):
+Pass these on the command line (`osu_collection_manager.exe --no-browser`, or `dotnet run --project src -- --no-browser`):
 
 | Option | Meaning |
 |---|---|
 | `--no-browser` | Don't open the browser automatically. |
-| `--urls=http://localhost:5555` | Use another address/port (default `http://localhost:5178` from `backend/appsettings.json`). |
+| `--urls=http://localhost:5555` | Use another address/port (default `http://localhost:5178` from `src/appsettings.json`). |
 | `--OsuPath="C:\path\to\osu!"` | Use this osu! folder instead of detecting or asking. |
 | `--AutoDetect=false` | Don't try to find osu! automatically. |
 
@@ -100,26 +100,27 @@ is remembered. You can change it any time with **Change folder** in the top-righ
 ## Project layout
 
 ```
-backend/     ASP.NET Core (.NET 10) server: reads/writes the osu! files, talks to the web, serves the frontend
-  Program.cs                  startup, API endpoints, single-instance + browser launch
-  Osu/                        osu!.db reader and collection.db reader/writer
-  Services/                   osu! folder detection, mirror and website clients, planner, importer, job manager
-frontend/    the web page (plain HTML, CSS and JavaScript modules, no build step)
-  index.html
-  css/                        one stylesheet per area (base, layout, library, search, planner, ...)
-  js/                         one module per tab (library, collections, search, planner, jobs, setup) plus core/ helpers
-publish.ps1  builds the release executable and zip
+src/                            everything the app is made of
+  Program.cs                    startup, API endpoints, single-instance + browser launch
+  Osu/                          osu!.db reader and collection.db reader/writer
+  Services/                     osu! folder detection, mirror and website clients, planner, importer, job manager
+  Properties/, appsettings.json, osu_collection_manager.csproj
+  wwwroot/                      the web page (plain HTML, CSS and JavaScript modules, no build step)
+    index.html
+    css/                        one stylesheet per area (base, layout, library, search, planner, ...)
+    js/                         one module per tab (library, collections, search, planner, jobs, setup) plus core/ helpers
+publish.ps1                     builds the release executable and zip
 ```
 
-The backend serves the `frontend` folder as static files and exposes the JSON API under `/api`.
-When developing, edit the files in `frontend/` and just refresh the browser.
+The C# code serves `src/wwwroot` as static files and exposes the JSON API under `/api`.
+When developing, edit the files in `src/wwwroot/` and just refresh the browser.
 
 | Piece | File |
 |---|---|
-| `osu!.db` reader (handles the float32 star ratings of db version 20250107 and later) | `backend/Osu/OsuDatabase.cs` |
-| `collection.db` read/write, atomic write and timestamped backup | `backend/Osu/CollectionDatabase.cs` |
-| osu! folder detection | `backend/Services/OsuLocator.cs`, `OsuInstall.cs` |
-| Mirror search, downloads with fallback and validation | `backend/Services/MirrorClient.cs` |
-| Profile, top plays and beatmap tags from public osu.ppy.sh pages (no API key) | `backend/Services/OsuWebClient.cs` |
-| Collection import and restore | `backend/Services/CollectionImporter.cs` |
-| Training categories and map selection | `backend/Services/TrainingPlanner.cs` |
+| `osu!.db` reader (handles the float32 star ratings of db version 20250107 and later) | `src/Osu/OsuDatabase.cs` |
+| `collection.db` read/write, atomic write and timestamped backup | `src/Osu/CollectionDatabase.cs` |
+| osu! folder detection | `src/Services/OsuLocator.cs`, `OsuInstall.cs` |
+| Mirror search, downloads with fallback and validation | `src/Services/MirrorClient.cs` |
+| Profile, top plays and beatmap tags from public osu.ppy.sh pages (no API key) | `src/Services/OsuWebClient.cs` |
+| Collection import and restore | `src/Services/CollectionImporter.cs` |
+| Training categories and map selection | `src/Services/TrainingPlanner.cs` |

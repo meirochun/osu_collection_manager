@@ -4,17 +4,17 @@ using System.Text.RegularExpressions;
 using OsuCollectionManager.Osu;
 using OsuCollectionManager.Services;
 
-// The backend serves the separate frontend/ folder as static files. A published copy keeps frontend/ right next to the
-// exe; while developing it sits at the repository root, a few folders above the build output (backend/bin/Debug/...).
-// appsettings.json is read from the exe's folder too, so a shortcut or another working directory doesn't matter.
+// The web page (src/wwwroot) is served as static files. A published copy keeps wwwroot right next to the exe; while
+// developing it is a few folders above the build output (src/bin/Debug/...). appsettings.json is read from the exe's
+// folder too, so a shortcut or another working directory doesn't matter.
 string appFolder = AppContext.BaseDirectory;
-string frontendFolder = FindFrontendFolder(appFolder)
-    ?? throw new DirectoryNotFoundException("The frontend folder was not found. It must sit next to the executable (or at the repository root).");
+string webRoot = FindWebRoot(appFolder)
+    ?? throw new DirectoryNotFoundException("The wwwroot folder was not found. It must sit next to the executable (or in the src folder).");
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = appFolder,
-    WebRootPath = frontendFolder,
+    WebRootPath = webRoot,
 });
 
 // The app is for one person on one PC: the first Url is the address of "the app", used below to open the browser.
@@ -361,11 +361,11 @@ catch (IOException e) when (e.Message.Contains("address already in use", StringC
     }
 }
 
-static string? FindFrontendFolder(string startFolder)
+static string? FindWebRoot(string startFolder)
 {
     for (var dir = new DirectoryInfo(startFolder); dir is not null; dir = dir.Parent)
     {
-        string candidate = Path.Combine(dir.FullName, "frontend");
+        string candidate = Path.Combine(dir.FullName, "wwwroot");
         if (File.Exists(Path.Combine(candidate, "index.html"))) return candidate;
     }
     return null;
