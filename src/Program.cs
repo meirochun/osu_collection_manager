@@ -4,6 +4,11 @@ using System.Text.RegularExpressions;
 using OsuCollectionManager.Osu;
 using OsuCollectionManager.Services;
 
+// .NET's command-line parser treats "--flag" followed by another argument as "--flag <value>", so a bare --no-browser
+// would swallow the option after it (--no-browser --OsuPath=... would lose the path). Write the flag as --no-browser=true.
+args = args.Select(argument => argument == "--no-browser" ? "--no-browser=true" : argument).ToArray();
+bool noBrowser = args.Contains("--no-browser=true");
+
 // The web page (src/wwwroot) is served as static files. A published copy keeps wwwroot right next to the exe; while
 // developing it is a few folders above the build output (src/bin/Debug/...). appsettings.json is read from the exe's
 // folder too, so a shortcut or another working directory doesn't matter.
@@ -27,8 +32,9 @@ if (!isFirstInstance)
 {
     if (await IsAppResponding(appUrl))
     {
-        Console.WriteLine($"osu! Collection Manager is already running, opening {appUrl}");
-        OpenBrowser(appUrl);
+        bool openBrowser = !noBrowser;
+        Console.WriteLine($"osu! Collection Manager is already running{(openBrowser ? ", opening " : " at ")}{appUrl}");
+        if (openBrowser) OpenBrowser(appUrl);
     }
     else
     {
@@ -147,7 +153,17 @@ api.MapGet("/status", (OsuInstall osu) =>
 
 // ---- First-run setup: where is the osu! folder? ---------------------------------------------
 
-api.MapGet("/setup", (OsuInstall osu) => new { configured = osu.IsConfigured, path = osu.Root, candidates = osu.FindCandidates() });
+api.MapGet("/setup", (OsuInstall osu) => new
+{
+    configured = osu.IsConfigured,
+    path = osu.Root,
+    candidates = osu.FindCandidates(),
+    // Lets the page show an example path that makes sense on this system.
+    platform = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : "other",
+    examplePath = OperatingSystem.IsWindows()
+        ? @"C:\Users\you\AppData\Local\osu!"
+        : "/home/you/.local/share/osu-wine/osu!",
+});
 
 api.MapPost("/setup", (OsuInstall osu, SetupRequest req) =>
 {
@@ -346,13 +362,15 @@ api.MapGet("/jobs/{id}", (JobManager jobs, string id) => jobs.Get(id) is { } j ?
 api.MapPost("/jobs/{id}/cancel", (JobManager jobs, string id) => { jobs.Cancel(id); return Results.Ok(); });
 
 // Open the browser once the server is really listening (a published exe; `dotnet run` opens it via launchSettings).
-if (!app.Environment.IsDevelopment() && !args.Contains("--no-browser"))
+if (!app.Environment.IsDevelopment() && !noBrowser)
 {
     app.Lifetime.ApplicationStarted.Register(() =>
     {
         Console.WriteLine();
         Console.WriteLine($"  osu! Collection Manager is running at {appUrl}");
-        Console.WriteLine("  Your browser should open by itself. Close this window to quit.");
+        Console.WriteLine(OperatingSystem.IsWindows()
+            ? "  Your browser should open by itself. Close this window to quit."
+            : "  Your browser should open by itself; if not, open the address above. Press Ctrl+C to quit.");
         Console.WriteLine();
         OpenBrowser(appUrl);
     });
@@ -403,8 +421,35 @@ static string? FindWebRoot(string startFolder)
 
 static void OpenBrowser(string url)
 {
+    if (OperatingSystem.IsLinux())
+    {
+        OpenBrowserOnLinux(url);
+        return;
+    }
     try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
     catch (Exception e) { Console.WriteLine($"Could not open the browser automatically ({e.Message}). Open {url} yourself."); }
+}
+
+/// <summary>Linux has no single "open this in the default browser" call; try the usual desktop helpers in turn.</summary>
+static void OpenBrowserOnLinux(string url)
+{
+    string[][] launchers = [["xdg-open"], ["gio", "open"], ["sensible-browser"], ["x-www-browser"]];
+    foreach (var launcher in launchers)
+    {
+        try
+        {
+            var start = new ProcessStartInfo(launcher[0]) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var argument in launcher.Skip(1)) start.ArgumentList.Add(argument);
+            start.ArgumentList.Add(url);
+            Process.Start(start)?.Dispose();
+            return;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // That helper isn't installed; try the next one.
+        }
+    }
+    Console.WriteLine($"Could not open a browser automatically. Open {url} yourself.");
 }
 
 static Task WriteSetupRequired(HttpContext ctx, string message)

@@ -36,8 +36,9 @@ public sealed class OsuInstall
     public bool IsFolderMissing => _root is not null && !OsuLocator.IsValid(_root);
 
     private string RequireRoot() => _root ?? throw new OsuNotConfiguredException();
-    public string OsuDbPath => Path.Combine(RequireRoot(), "osu!.db");
-    public string CollectionDbPath => Path.Combine(RequireRoot(), "collection.db");
+    // On Linux file names are case-sensitive: find the real "osu!.db" / "collection.db" whatever case they were created in.
+    public string OsuDbPath => PathCase.FindFile(RequireRoot(), "osu!.db") ?? Path.Combine(RequireRoot(), "osu!.db");
+    public string CollectionDbPath => PathCase.FindFile(RequireRoot(), "collection.db") ?? Path.Combine(RequireRoot(), "collection.db");
 
     private bool AutoDetectEnabled => _config.GetValue("AutoDetect", true);
 
@@ -93,20 +94,58 @@ public sealed class OsuInstall
         {
             // BeatmapDirectory lives in osu!.<user>.cfg and may be relative to the osu! folder.
             string root = RequireRoot();
-            foreach (var cfg in Directory.EnumerateFiles(root, "osu!.*.cfg"))
+            var configFiles = Directory.EnumerateFiles(root).Where(f =>
+                Path.GetFileName(f).StartsWith("osu!.", StringComparison.OrdinalIgnoreCase)
+                && Path.GetFileName(f).EndsWith(".cfg", StringComparison.OrdinalIgnoreCase));
+            foreach (var cfg in configFiles)
             {
                 var line = File.ReadLines(cfg).FirstOrDefault(l => l.StartsWith("BeatmapDirectory", StringComparison.OrdinalIgnoreCase));
                 if (line?.Split('=', 2) is [_, var value] && value.Trim().Length > 0)
-                    return Path.IsPathRooted(value.Trim()) ? value.Trim() : Path.Combine(root, value.Trim());
+                    return ResolveSongsFolder(root, value.Trim());
             }
-            return Path.Combine(root, "Songs");
+            return PathCase.FindDirectory(root, "Songs") ?? Path.Combine(root, "Songs");
         }
+    }
+
+    /// <summary>
+    /// Turns the BeatmapDirectory setting into a real folder. On Windows that's the value itself (or relative to the osu! folder).
+    /// Under Wine on Linux the value is usually a Windows path such as "D:\Games\osu!\Songs", which is translated through the
+    /// Wine prefix's drive letters; if that fails the Songs folder inside the osu! folder is used.
+    /// </summary>
+    private static string ResolveSongsFolder(string root, string setting)
+    {
+        if (OperatingSystem.IsWindows())
+            return Path.IsPathRooted(setting) ? setting : Path.Combine(root, setting);
+
+        if (WinePrefix.HasDriveLetter(setting))
+        {
+            var translated = WinePrefix.ToLinuxPath(setting, WinePrefix.FindPrefixRoot(root));
+            if (translated is not null && Directory.Exists(translated)) return translated;
+        }
+        else if (setting.StartsWith('/'))
+        {
+            return setting;
+        }
+        else
+        {
+            // Relative to the osu! folder, possibly written with backslashes ("Songs\Extra").
+            var relative = PathCase.ResolveRelative(root, setting);
+            if (Directory.Exists(relative)) return relative;
+        }
+        return PathCase.FindDirectory(root, "Songs") ?? Path.Combine(root, "Songs");
     }
 
     /// <summary>Test switch (--IgnoreRunningGame=true) for working on a scratch copy of the osu! folder while the game is open.</summary>
     private static bool _ignoreRunningGame;
 
-    public static bool IsGameRunning => !_ignoreRunningGame && Process.GetProcessesByName("osu!").Length > 0;
+    public static bool IsGameRunning => !_ignoreRunningGame && IsOsuProcessRunning();
+
+    private static bool IsOsuProcessRunning()
+    {
+        // Under Wine the process is "osu!.exe" and only shows up in /proc; on Windows it's a normal "osu!" process.
+        if (OperatingSystem.IsLinux()) return OsuLocator.LinuxOsuProcessIds().Any();
+        return Process.GetProcessesByName("osu!").Length > 0;
+    }
 
     public OsuDatabase Database
     {

@@ -35,6 +35,7 @@ async function openOverlay({ dismissable }) {
 
   const state = await api("/setup");
   $("#setupPath").value = state.path ?? "";
+  $("#setupPath").placeholder = `Paste the folder path, e.g. ${state.examplePath}`;
   renderCandidates(state.candidates);
   $("#setupPath").focus();
 }
@@ -63,7 +64,7 @@ let browsingPath = ""; // "" = the list of drives
 
 function renderFolders(listing) {
   browsingPath = listing.path;
-  $("#folderPath").textContent = listing.path || "This PC";
+  $("#folderPath").textContent = listing.path || "Places";
 
   const rows = [];
   if (listing.parent !== null) {

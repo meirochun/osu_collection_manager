@@ -1,0 +1,57 @@
+name: Release
+
+# Push a tag such as v1.0.0 to build both downloads and attach them to a GitHub release
+# (the text of RELEASE_NOTES.md becomes the release description).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test tests/OsuCollectionManager.Tests
+      - run: bash publish.sh linux-x64
+      - run: bash tests/smoke.sh dist/app-linux-x64/osu_collection_manager
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: dist/osu_collection_manager-linux-x64.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test tests/OsuCollectionManager.Tests
+      - run: ./publish.ps1
+        shell: pwsh
+      - run: bash tests/smoke.sh dist/app/osu_collection_manager.exe
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-x64
+          path: dist/osu_collection_manager-win-x64.zip
+
+  release:
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          body_path: RELEASE_NOTES.md

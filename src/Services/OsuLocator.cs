@@ -19,7 +19,7 @@ public static partial class OsuLocator
     private const string DatabaseFileName = "osu!.db";
 
     public static bool IsValid(string? folder) =>
-        !string.IsNullOrWhiteSpace(folder) && File.Exists(Path.Combine(folder, DatabaseFileName));
+        !string.IsNullOrWhiteSpace(folder) && PathCase.FindFile(folder, DatabaseFileName) is not null;
 
     /// <summary>
     /// Turns whatever the user gave us into the osu! install folder, or null if it isn't one.
@@ -31,7 +31,7 @@ public static partial class OsuLocator
 
         try
         {
-            string path = Path.GetFullPath(input.Trim().Trim('"'));
+            string path = Path.GetFullPath(ExpandHome(input.Trim().Trim('"')));
             if (File.Exists(path)) path = Path.GetDirectoryName(path)!;
 
             // Walk up a few levels so ...\osu!\Songs and ...\osu!\Songs\123 abc also work.
@@ -58,7 +58,7 @@ public static partial class OsuLocator
     {
         if (string.IsNullOrWhiteSpace(path)) return ListDrives();
 
-        string full = Path.GetFullPath(path.Trim().Trim('"'));
+        string full = Path.GetFullPath(ExpandHome(path.Trim().Trim('"')));
         if (!Directory.Exists(full)) throw new DirectoryNotFoundException("That folder does not exist.");
 
         var folders = new List<FolderEntry>();
@@ -66,8 +66,9 @@ public static partial class OsuLocator
         {
             foreach (var dir in new DirectoryInfo(full).EnumerateDirectories().OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase))
             {
-                // Skip what Windows hides from people too ($RECYCLE.BIN, System Volume Information, ...).
-                if ((dir.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) continue;
+                // Skip what Windows hides from people too ($RECYCLE.BIN, System Volume Information, ...). On Linux every
+                // ".folder" counts as hidden, but that is exactly where Wine prefixes live (~/.local/share, ~/.wine), so show them.
+                if (OperatingSystem.IsWindows() && (dir.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) continue;
                 folders.Add(new FolderEntry(dir.Name, dir.FullName, IsValid(dir.FullName)));
                 if (folders.Count >= MaxFoldersListed) break;
             }
@@ -77,12 +78,17 @@ public static partial class OsuLocator
             // Unreadable folder: show it as empty rather than failing the whole browser.
         }
 
-        string? parent = Path.GetDirectoryName(full.TrimEnd(Path.DirectorySeparatorChar));
-        return new FolderListing(full, parent ?? "", IsValid(full), folders);
+        // Parent is "" (the top-level list) once we are at a drive root ("D:\" or "/").
+        string trimmed = full.TrimEnd(Path.DirectorySeparatorChar);
+        string root = (Path.GetPathRoot(full) ?? "").TrimEnd(Path.DirectorySeparatorChar);
+        string parent = trimmed == root ? "" : Path.GetDirectoryName(trimmed) ?? "";
+        return new FolderListing(full, parent, IsValid(full), folders);
     }
 
     private static FolderListing ListDrives()
     {
+        if (!OperatingSystem.IsWindows()) return new FolderListing("", null, false, LinuxBrowseRoots());
+
         var entries = new List<FolderEntry>();
         foreach (var drive in DriveInfo.GetDrives())
         {
@@ -100,13 +106,13 @@ public static partial class OsuLocator
     public static List<OsuCandidate> FindCandidates()
     {
         var found = new List<OsuCandidate>();
-
-        void Add(string? path, string source, bool confident)
+        if (!OperatingSystem.IsWindows())
         {
-            if (Normalize(path) is not { } folder) return;
-            if (found.Any(c => string.Equals(c.Path, folder, StringComparison.OrdinalIgnoreCase))) return;
-            found.Add(new OsuCandidate(folder, source, confident));
+            AddLinuxCandidates(found);
+            return found;
         }
+
+        void Add(string? path, string source, bool confident) => AddCandidate(found, path, source, confident);
 
         // Strong signals: the game is running right now, or it registered itself with Windows.
         Add(FromRunningProcess(), "osu! is running from here", confident: true);
@@ -125,6 +131,22 @@ public static partial class OsuLocator
             Add(Path.Combine(root, "Games", "osu!"), $"found on {root}", confident: false);
         }
         return found;
+    }
+
+    /// <summary>Adds an install to the list if the path really is one and it isn't there yet.</summary>
+    private static void AddCandidate(List<OsuCandidate> found, string? path, string source, bool confident)
+    {
+        if (Normalize(path) is not { } folder) return;
+        if (found.Any(c => string.Equals(c.Path, folder, StringComparison.OrdinalIgnoreCase))) return;
+        found.Add(new OsuCandidate(folder, source, confident));
+    }
+
+    /// <summary>Lets people type "~/Games/osu!" in the path box.</summary>
+    private static string ExpandHome(string path)
+    {
+        if (path == "~" || path.StartsWith("~/", StringComparison.Ordinal))
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.TrimStart('~').TrimStart('/'));
+        return path;
     }
 
     /// <summary>The candidate to use without asking: a strong signal, or the only install found.</summary>

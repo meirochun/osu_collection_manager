@@ -1,7 +1,7 @@
 # osu! Collection Manager
 
-A small local web app for **osu!stable** on Windows. It reads your `osu!.db`, manages `collection.db`, downloads
-beatmaps from public mirrors and builds training collections from your profile.
+A small local web app for **osu!stable** on Windows and Linux (osu! running through Wine). It reads your `osu!.db`,
+manages `collection.db`, downloads beatmaps from public mirrors and builds training collections from your profile.
 
 It runs only on your own PC: a small server listens on `localhost` and your browser is the interface. Nothing is hosted
 anywhere and you don't need an osu! API key.
@@ -26,16 +26,18 @@ On the first start the app looks for your osu! folder by itself, or asks you for
 
 ## What you need
 
-**To run a release build (the zip with the `.exe`):**
+**To run a release build (the Windows zip or the Linux `.tar.gz`):**
 
-- Windows 10 or 11
-- osu!stable installed (the folder that contains `osu!.db` and `Songs`)
+- Windows 10 or 11, or a 64-bit Linux desktop
+- osu!stable installed (the folder that contains `osu!.db` and `Songs`). On Linux that means osu!stable running through
+  Wine, for example with [osu-winello](https://github.com/NelloKudo/osu-winello), Lutris or Bottles
 - An internet connection for downloads, search and the Training Planner
-- Nothing else — the release includes the .NET runtime
+- Nothing else: the release includes the .NET runtime. On Linux, `xdg-utils` is only needed if you want the browser to
+  open by itself (most desktops have it)
 
 **To run from source:**
 
-- Windows 10 or 11
+- Windows 10 or 11, or Linux
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - osu!stable and an internet connection, as above
 
@@ -59,6 +61,30 @@ osu!lazer is not supported: it stores its data in a different format.
 Starting it a second time just opens the browser tab of the copy that is already running.
 Windows SmartScreen may warn about an unsigned app the first time; choose **More info → Run anyway**.
 
+### On Linux
+
+The app runs natively on Linux (no Wine needed for the app itself) and edits the files of your Wine-based osu! install.
+
+```
+tar xzf osu_collection_manager-linux-x64.tar.gz -C osu_collection_manager   # or any folder you like
+cd osu_collection_manager
+./osu_collection_manager
+```
+
+It prints `http://localhost:5178` and opens your browser. Press `Ctrl+C` in the terminal to quit. If the file isn't
+executable (some archive tools drop the permission), run `chmod +x osu_collection_manager` once.
+
+Notes for Wine setups:
+
+- **Finding osu!:** it checks a running osu!, then the usual prefix locations (osu-winello's `~/.local/share/osu-wine/osu!`,
+  `~/.wine`, Lutris `~/Games/*`, Bottles, Proton) and mounted drives. If yours lives somewhere else, use **Browse…** in the
+  first-run dialog (folders that start with a dot, such as `.local`, are shown) or pass
+  `--OsuPath="/path/to/osu!"`.
+- **Songs folder:** osu! may store it as a Windows path like `D:\Games\osu!\Songs`. The app translates that through the
+  prefix's drive letters (`dosdevices`), so no setup is needed.
+- **Closing osu!:** the "close osu! first" safety check looks for the `osu!.exe` process, so it works with Wine too.
+- The settings file is `~/.local/share/OsuCollectionManager/settings.json`.
+
 ### From source
 
 ```
@@ -69,12 +95,33 @@ The console prints the address to open (`dotnet run` also opens the browser for 
 
 ### Build a release yourself
 
+On Windows:
+
 ```
 .\publish.ps1
 ```
 
 This produces a self-contained single-file executable and a zip in `dist\`. The zip contains the `.exe`, the `wwwroot`
 folder and `appsettings.json`; they must stay together.
+
+On Linux (or WSL):
+
+```
+./publish.sh            # or ./publish.sh linux-arm64
+```
+
+This produces `dist/osu_collection_manager-linux-x64.tar.gz` with the same contents. Build it on Linux so the executable
+permission is kept. Pushing a tag such as `v1.0.0` builds both downloads on GitHub and attaches them to a release
+(see `.github/workflows/release.yml`).
+
+### Tests
+
+```
+dotnet test tests/OsuCollectionManager.Tests
+```
+
+Some tests only make sense on Linux (Wine prefixes, `/proc`, case-sensitive files) and are skipped on Windows; the
+CI workflow runs them on Ubuntu. `tests/smoke.sh <path to executable>` starts a built copy and checks it over HTTP.
 
 ### Options
 
@@ -84,7 +131,7 @@ Pass these on the command line (`osu_collection_manager.exe --no-browser`, or `d
 |---|---|
 | `--no-browser` | Don't open the browser automatically. |
 | `--urls=http://localhost:5555` | Use another address/port (default `http://localhost:5178` from `src/appsettings.json`). |
-| `--OsuPath="C:\path\to\osu!"` | Use this osu! folder instead of detecting or asking. |
+| `--OsuPath="C:\path\to\osu!"` | Use this osu! folder instead of detecting or asking (on Linux e.g. `--OsuPath="$HOME/.local/share/osu-wine/osu!"`). |
 | `--AutoDetect=false` | Don't try to find osu! automatically. |
 
 ## First run
@@ -92,8 +139,10 @@ Pass these on the command line (`osu_collection_manager.exe --no-browser`, or `d
 The app needs the folder that contains `osu!.db`. It looks in this order:
 
 1. `--OsuPath=...` if you passed it.
-2. The folder you chose last time (saved in `%LOCALAPPDATA%\OsuCollectionManager\settings.json`).
-3. Automatic detection: a running osu!, then the Windows registry, then the usual install folders on your local drives.
+2. The folder you chose last time (saved in `%LOCALAPPDATA%\OsuCollectionManager\settings.json` on Windows,
+   `~/.local/share/OsuCollectionManager/settings.json` on Linux).
+3. Automatic detection. On Windows: a running osu!, then the Windows registry, then the usual install folders on your
+   local drives. On Linux: a running osu!, then the usual Wine prefix locations and mounted drives.
 
 If it can't decide, a **"Where is your osu! folder?"** dialog opens with the folders it found, a **Browse…** button
 (click through your drives and folders; folders that contain `osu!.db` are marked) and a box to paste a path. Your choice
@@ -102,7 +151,7 @@ is remembered. You can change it any time with **Change folder** in the top-righ
 ## Good to know
 
 - **Close osu! before changing collections.** osu! rewrites `collection.db` when it exits, so the app refuses to write
-  while `osu!.exe` is running.
+  while `osu!.exe` is running (under Wine too).
 - Every change to `collection.db` first saves a backup next to it (`collection.db.bak-<date>`).
 - Downloaded `.osz` files go to your `Songs` folder; osu! imports them the next time it starts. Until then their maps show
   up as "missing" in collections.
@@ -122,7 +171,9 @@ src/                            everything the app is made of
     index.html
     css/                        one stylesheet per area (base, layout, library, search, planner, ...)
     js/                         one module per tab (library, collections, search, planner, jobs, setup) plus core/ helpers
-publish.ps1                     builds the release executable and zip
+tests/                          unit tests (OsuCollectionManager.Tests) and smoke.sh, a start-and-check script for built copies
+.github/workflows/              CI (tests on Linux and Windows) and the release build
+publish.ps1, publish.sh         build the release executable + zip (Windows) or tar.gz (Linux)
 ```
 
 The C# code serves `src/wwwroot` as static files and exposes the JSON API under `/api`.
@@ -132,7 +183,8 @@ When developing, edit the files in `src/wwwroot/` and just refresh the browser.
 |---|---|
 | `osu!.db` reader (handles the float32 star ratings of db version 20250107 and later) | `src/Osu/OsuDatabase.cs` |
 | `collection.db` read/write, atomic write and timestamped backup | `src/Osu/CollectionDatabase.cs` |
-| osu! folder detection | `src/Services/OsuLocator.cs`, `OsuInstall.cs` |
+| osu! folder detection (Windows registry, Wine prefixes on Linux) | `src/Services/OsuLocator.cs`, `OsuLocator.Linux.cs`, `OsuInstall.cs` |
+| Wine drive-letter translation and case-insensitive file names | `src/Services/WinePrefix.cs`, `PathCase.cs` |
 | Mirror search, downloads with fallback and validation | `src/Services/MirrorClient.cs` |
 | Profile, top plays and beatmap tags from public osu.ppy.sh pages (no API key) | `src/Services/OsuWebClient.cs` |
 | Collection import and restore | `src/Services/CollectionImporter.cs` |

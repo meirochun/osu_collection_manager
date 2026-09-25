@@ -1,0 +1,43 @@
+name: CI
+
+# Runs the tests on Linux and Windows, then builds the release executable and smoke-tests it.
+# The Linux job is what proves the Linux support works: it has a real /proc, symlinks and case-sensitive files.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Unit tests
+        run: dotnet test tests/OsuCollectionManager.Tests --verbosity normal
+
+      - name: Build the Linux release
+        if: runner.os == 'Linux'
+        run: bash publish.sh linux-x64
+
+      - name: Smoke-test the Linux release
+        if: runner.os == 'Linux'
+        run: bash tests/smoke.sh dist/app-linux-x64/osu_collection_manager
+
+      - name: Build the Windows release
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./publish.ps1
+
+      - name: Smoke-test the Windows release
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash tests/smoke.sh dist/app/osu_collection_manager.exe
