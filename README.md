@@ -43,6 +43,13 @@ osu!lazer is not supported: it stores its data in a different format.
 
 ## How to run
 
+### From release page (Recommended)
+
+1. Go to [release page](https://github.com/meirochun/osu_collection_manager/releases/latest).
+2. Download osu_collection_manager-win-x64.zip.
+3. On windows, unzip it and run the .exe file.
+4. On linux, unzip it and run with wine the .exe file.
+
 ### From a release build
 
 1. Unzip the release anywhere.
