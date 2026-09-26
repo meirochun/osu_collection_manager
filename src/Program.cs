@@ -343,6 +343,8 @@ api.MapGet("/plan/categories", () => TrainingPlanner.Catalog.Select(c => new
 api.MapPost("/plan", (JobManager jobs, TrainingPlanner planner, PlanOptions options) =>
 {
     if (string.IsNullOrWhiteSpace(options.Username)) return Results.BadRequest(new { error = "Username is required." });
+    if (jobs.All.Any(j => j.Kind == "plan" && j.State == JobState.Running))
+        return Results.Conflict(new { error = "A plan is already being generated." });
     var job = jobs.Start("plan", async (job, ct) => await planner.GenerateAsync(options, job, ct));
     return Results.Ok(new { job.Id });
 });

@@ -39,8 +39,9 @@ function renderJob(job) {
 /**
  * Polls one job once a second and draws it inside `targetSelector`.
  * `onDone` is called with the finished job when it completes successfully.
+ * `onEnd` (optional) is called once when tracking stops, whatever the outcome.
  */
-export function trackInline(jobId, targetSelector, onDone) {
+export function trackInline(jobId, targetSelector, onDone, onEnd) {
   const target = $(targetSelector);
 
   async function poll() {
@@ -50,7 +51,9 @@ export function trackInline(jobId, targetSelector, onDone) {
 
       if (job.state === "Running") {
         setTimeout(poll, INLINE_POLL_MS);
-      } else if (job.state === "Completed") {
+        return;
+      }
+      if (job.state === "Completed") {
         onDone?.(job);
       } else {
         toast(job.error || job.state, true);
@@ -58,6 +61,7 @@ export function trackInline(jobId, targetSelector, onDone) {
     } catch (error) {
       toast(error.message, true);
     }
+    onEnd?.();
   }
   poll();
 }

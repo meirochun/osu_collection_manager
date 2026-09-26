@@ -153,17 +153,27 @@ export async function initPlanner() {
 
   $("#planForm").addEventListener("submit", guard(async event => {
     event.preventDefault();
+    const button = $("#planForm button[type=submit]");
+    if (button.disabled) return;
     const options = readPlanOptions();
 
-    ensureProfile(options.username);
-    const { id } = await api("/plan", { method: "POST", body: options });
+    // Stay disabled until the job ends, so a second click can't start a duplicate job.
+    button.disabled = true;
+    let id;
+    try {
+      ensureProfile(options.username);
+      ({ id } = await api("/plan", { method: "POST", body: options }));
+    } catch (error) {
+      button.disabled = false;
+      throw error;
+    }
 
     $("#planOut").innerHTML = "";
     trackInline(id, "#planProgress", job => {
       currentPlan = job.result;
       currentPlan.collections.forEach(collection => { collection.included = true; });
       renderPlan();
-    });
+    }, () => { button.disabled = false; });
   }));
 
   // Fires when the field loses focus after an edit, or when the status line auto-fills the player name.
