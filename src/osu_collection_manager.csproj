@@ -8,4 +8,16 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- Release size: these only take effect on `dotnet publish` (see publish.ps1 / publish.sh). -->
+  <PropertyGroup>
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- Partial: trim the framework only, leave our own code (reflection-based JSON binding) alone. -->
+    <TrimMode>partial</TrimMode>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Trimming turns on a compile-time endpoint generator that can't handle endpoints returning anonymous types. -->
+    <EnableRequestDelegateGenerator>false</EnableRequestDelegateGenerator>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
 </Project>
